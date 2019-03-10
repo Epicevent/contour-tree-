@@ -37,3 +37,6 @@
     2 6 10 14 18
     3 7 11 15 19
 """
+
+def image_open(filedir):
+    pass
