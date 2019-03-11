@@ -39,44 +39,46 @@
 """
 
 # libraries
+import sys
 from PIL import Image
 import numpy as np
 
-"""
-    [index, value]
-    ex. [[0, 1], [1, 255], [2, 200], ...]
-"""
+# if 0 argument is given
+if len(sys.argv) is 1:
+    print("Usage: python contour.py [image file name] [directory name to save result] or python3 contour.py [image file name]")
 
-def image_open(_imgFile):
-    """
-    Read the img and return PIL Image object
-    """
-    # Read the image file
-    img = Image.open(_imgFile)
-    return img
+# if more than 3 arguments are given
+if len(sys.argv) >= 4:
+    print("Usage: python contour.py [image file name] [directory name to save result] or python3 contour.py [image file name]")
 
-def image_get_width(_img):
-    """
-    Input: PIL.Image _img
-    Output: int imgWidth
-    """
-    imgWidth = _img.width
-    return imgWidth
+# if 2 argument is given
+# python contour.py [image file name] [directory name to save result]
+if len(sys.argv) is 3:
+    pass
 
-def image_get_height(_img):
-    """
-    Input: PIL.Image _img
-    Output: int imgHeight
-    """
-    imgHeight = _img.height
-    return imgHeight
+# if 1 argument is given
+# python3 contour.py [image file name]
+if len(sys.argv) is 2:
+    img = Image.open(sys.argv[1])
+    imgHeight = img.height
+    imgWidth = img.width
+    # img.convert('L')
+    npImgArr = np.array(img)
+    print(img.size)
+    print(npImgArr)
+    print(npImgArr.size)
+    # To-Be Implemented
+    # flatten the 2D matrix to 1D matrix in columnwise order
+    # Use ravel instead of flatten because ravel does not copy the ndarray so it is faster.
+    arr=npImgArr.ravel('F')
+    print(arr)
+    print(arr.size)
+    # Calculate bifurcation points
 
-def image_to_numpy_array(_img):
-    """
-    Input: PIL.Image _img
-    Description: conver the PIL image into a grey scale image(8-bit pixels, black-and-white)
-    Output: numpy array
-    """
-    img_greyscale = _img.convert('L')
-    npImgArr = np.array(img_greyscale)
-    return npImgArr
+    # file output
+    f=open(sys.argv[1]+'.txt','w')
+    f.write('title : '+sys.argv[1]+'\n')
+    f.write('image size : ['+str(imgHeight)+' of rows] ['+str(imgWidth)+' of cols]')
+    # [data of bifucation points]
+
+    f.close()
