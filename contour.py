@@ -37,6 +37,7 @@
     2 6 10 14 18
     3 7 11 15 19
 """
+import PIL
 
-def image_open(filedir):
-    pass
+def image_vectorize(image):
+   pass

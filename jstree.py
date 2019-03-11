@@ -243,7 +243,7 @@ class JStree(object):
 
     def _to_ij_notation(self, v):
         i = v % self.N
-        j = int(v / self.M)
+        j = int(v / self.N)
         return i, j
 
     def find_adj(self, element):  # find roots of distinct  components adjacent a element.
