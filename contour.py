@@ -39,7 +39,6 @@
 """
 import PIL
 
-<<<<<<< HEAD
 # libraries
 import sys
 from PIL import Image
@@ -84,7 +83,3 @@ if len(sys.argv) is 2:
     # [data of bifucation points]
 
     f.close()
-=======
-def image_vectorize(image):
-   pass
->>>>>>> 3547d1b621b06d8afaaa66dbeae01a0179beb103
