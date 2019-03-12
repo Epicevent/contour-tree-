@@ -294,7 +294,7 @@ class JStree(object):
         # merge the components  into one
         for root in proper_adjacent_roots:
             self._par[root] = single_disjoint_element
-            self._par_compressed_JSUFD = single_disjoint_element
+            self._par_compressed_JSUFD[root] = single_disjoint_element
             self.n_comps -= 1
 
         return ret_bool
