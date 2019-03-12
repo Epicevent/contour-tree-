@@ -275,10 +275,11 @@ class JStree(object):
         adj_j = 0
         adj_index = 0
         proper_adj_component_list = []
-        for i in range(-1, 2):
-            for j in range(-1, 2):
+        for (i ,j) in [(-1,-1),(-1,0),(-1,1),(0,-1),(0,1),(1,-1),(1,0),(1,1)]:
                 adj_i = ele_i + i
                 adj_j = ele_j + j
+                if not 0<=adj_i<self.N or not 0<=adj_j<self.M:
+                    continue
                 adj_index = self._to_index_notation(adj_i, adj_j)
                 # check adj_index is proper adjacent to element
                 if adj_index in self and adj_index != element:

@@ -81,7 +81,7 @@ def draw_filled_circle (imgae_object,xy_of_center,radius,color = 'red'):
 
 
 if __name__ =="__main__":
-    im = Image.open('test.jpg')
+    im = Image.open('IM-0001-0001.jpeg')
     grayimg = im.convert('LA')
     v = image_vectorize(grayimg)
     number_of_cols , number_of_rows = grayimg.size
