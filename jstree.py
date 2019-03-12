@@ -9,6 +9,7 @@ from __future__ import (
 
 # libraries
 import numpy as np
+import tqdm
 
 
 class JStree(object):
@@ -130,7 +131,7 @@ class JStree(object):
         self.n_comps = 0  # the number of disjoint trees
         self._n_leaf = 0  # the number of all leaf node over forest
         self._next = 0  # next available index in sorted index list.
-        self._is_root = np.zeros(self.N*self.M , dtype=bool) # It is root element?
+        self._is_root = np.zeros(self.N * self.M, dtype=bool)  # It is root element?
 
         # for speeding up root found function
         self._par_compressed_JSUFD = np.ones(self.N * self.M, dtype=int)  # [1,...,1]
@@ -164,14 +165,15 @@ class JStree(object):
             raise ValueError("you must input {}size array but Its size was {} or not distinct ".format(
                 self.N * self.M, len(array)))
         if self._made:
-            self.__init__(self.N,self.M)
-        print("PROGRESS BAR IS HERE")
-        progress_state = 0
-        for i in range(self.N * self.M):
+            self.__init__(self.N, self.M)
+
+
+        for i in tqdm.tqdm(range(self.N * self.M)):
             self.bfalg_add()
+
         self._made = True
 
-# get functions ( getter)
+    # get functions ( getter)
     def get_bifurcation_point(self):
         if not self._made:
             raise NotImplementedError("jstree.make( arraytype ) is requreid")
@@ -237,7 +239,7 @@ class JStree(object):
 
         if x not in self:
             return self._none
-        if self._is_root[x] :
+        if self._is_root[x]:
             return x
 
         p = x
