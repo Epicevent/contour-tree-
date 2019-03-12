@@ -89,6 +89,7 @@ if __name__ =="__main__":
     increasing_indices = increasing_arg_sorting(v)
     jointsplittree.make(increasing_indices)
     joint_bifurcation_point = jointsplittree.get_bifurcation_point()
+    print(jointsplittree.max_n_comp)
     jointsplittree.make(increasing_indices[::-1]) #reverse
     split_bifurcation_point = jointsplittree.get_bifurcation_point()
 

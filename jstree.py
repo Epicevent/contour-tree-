@@ -122,7 +122,7 @@ class JStree(object):
         """none is regarded as none type value... for no dynamic allocation.
         because of conditions of sorted index list, "NM" cannot be element.
        """
-
+        self.max_n_comp = 0
         self.n_elts = 0  # current number of elements
         self.n_comps = 0  # the number of disjoint trees
         self._n_leaf = 0  # the number of all leaf node over forest
@@ -257,8 +257,8 @@ class JStree(object):
         ValueError
             If the given element is not found.
         """
-        if self._is_illegal(x):
-            raise ValueError('{} is illegal element'.format(x))
+        # if self._is_illegal(x):
+        #     raise ValueError('{} is illegal element'.format(x))
 
         if x not in self:
             return self._none
@@ -272,11 +272,11 @@ class JStree(object):
             # path compression
             q = self._par_compressed_JSUFD[p]
             self._par_compressed_JSUFD[p] = self._par_compressed_JSUFD[q]
-
-            if self._is_illegal(q):
-                raise ValueError('element {} has wrong parent {}'.format(p, q))
-            if q == self._none:
-                raise ValueError('element {} has no parent ({} is regarded as none) '.format(p, q))
+            #
+            # if self._is_illegal(q):
+            #     raise ValueError('element {} has wrong parent {}'.format(p, q))
+            # if q == self._none:
+            #     raise ValueError('element {} has no parent ({} is regarded as none) '.format(p, q))
             p = q
 
         assert self._is_root_of_JSUFD[p]
@@ -355,4 +355,5 @@ class JStree(object):
         self._par_compressed_JSUFD[single_disjoint_element] = new_root_in_JSUFD
         self._map_JSUFD_root_to_JStree[new_root_in_JSUFD] = single_disjoint_element
         self._siz[single_disjoint_element] = component_size
-
+        if self.max_n_comp <self.n_comps:
+            self.max_n_comp = self.n_comps
