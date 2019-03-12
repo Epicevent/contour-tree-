@@ -104,11 +104,7 @@ class JStree(object):
         " x in js" returns "True" if "x" is an element in "js"
 
     """
-
-    def __init__(self, number_of_img_rows, number_of_img_cols):
-        self.N = number_of_img_rows
-        self.M = number_of_img_cols
-
+    def initaillize(self):
         # information of this instacne
         self.bifurcation_elements = np.zeros(self.N * self.M, dtype=bool)
         """ image indices of bifurcation point 
@@ -132,8 +128,8 @@ class JStree(object):
         self._n_leaf = 0  # the number of all leaf node over forest
         self._next = 0  # next available index in sorted index list.
         self._is_root_of_JSUFD = np.zeros(self.N * self.M, dtype=bool)  # It is root element of JSUFD?
-        self._map_JSUFD_root_to_JStree = np.zeros(self.N*self.M,dtype=int) # to find root element
-        self._siz = np.zeros(self.N*self.M,dtype=int) #correct only for root (in JStree)
+        self._map_JSUFD_root_to_JStree = np.zeros(self.N * self.M, dtype=int)  # to find root element
+        self._siz = np.zeros(self.N * self.M, dtype=int)  # correct only for root (in JStree)
         # for speeding up root found function
         self._par_compressed_JSUFD = np.ones(self.N * self.M, dtype=int)  # [1,...,1]
         self._par_compressed_JSUFD = self._par_compressed_JSUFD * self._none  # [_none, ... ,_none]
@@ -141,6 +137,32 @@ class JStree(object):
         #  for the internal tree structure
         self._par = np.ones(self.N * self.M, dtype=int)  # [ 1,...,1]
         self._par = self._par * self._none  # [_none, ... ,_none]
+
+    def __init__(self, number_of_img_rows, number_of_img_cols):
+        self.N = number_of_img_rows
+        self.M = number_of_img_cols
+        self.adj_region_table = np.ones(self.M*self.N,dtype=int)*4
+        # init region
+        self.adj_region_table[self._to_index_notation(0,0)] = 0
+        self.adj_region_table[self._to_index_notation(0, self.M - 1)] = 2
+        self.adj_region_table[self._to_index_notation(self.N -1, 0)] = 6
+        self.adj_region_table[self._to_index_notation(self.N-1, self.M - 1)] = 8
+        for j in range(1,self.M - 1):
+            self.adj_region_table[self._to_index_notation(0,j)] = 1
+            self.adj_region_table[self._to_index_notation(self.N - 1, j)] =7
+        for i in range(1,self.N - 1):
+            self.adj_region_table[self._to_index_notation(i,0)] = 3
+            self.adj_region_table[self._to_index_notation(i,self.M - 1)] = 5
+        self._adj = [np.array([ 1,self.N ,self.N + 1 ],dtype=int),
+                     np.array([-self.N ,-self.N +1 , 1 , self.N , self.N + 1],dtype=int),
+                     np.array([-self.N ,-self.N + 1, 1],dtype=int),
+                     np.array([ -1, 1, self.N  - 1,self.N,self.N+1],dtype= int),
+                     np.array([-self.N-1,-self.N,-self.N+1,-1 ,1,self.N - 1, self.N ,self.N + 1],dtype=int),
+                     np.array([-self.N -1, -self.N, -self.N + 1, -1, 1],dtype=int),
+                     np.array([-1,-1+self.N,self.N],dtype=int),
+                     np.array([-self.N-1,-self.N ,-1,self.N -1,self.N],dtype=int),
+                     np.array([-1-self.N,-self.N,-1],dtype=int)]
+        self.initaillize()
 
     # public method
     def make(self, array):
@@ -166,7 +188,7 @@ class JStree(object):
             raise ValueError("you must input {}size array but Its size was {} or not distinct ".format(
                 self.N * self.M, len(array)))
         if self._made:
-            self.__init__(self.N, self.M)
+            self.initaillize()
 
 
         for i in tqdm.tqdm(range(self.N * self.M)):
@@ -270,24 +292,14 @@ class JStree(object):
         return i, j
 
     def find_adj(self, element):  # find jsUFD roots  of distinct  components adjacent a element.
-        ele_i, ele_j = self._to_ij_notation(element)
-        adj_i = 0
-        adj_j = 0
-        adj_index = 0
-        proper_adj_component_list = []
-        for (i ,j) in [(-1,-1),(-1,0),(-1,1),(0,-1),(0,1),(1,-1),(1,0),(1,1)]:
-                adj_i = ele_i + i
-                adj_j = ele_j + j
-                if not 0<=adj_i<self.N or not 0<=adj_j<self.M:
-                    continue
-                adj_index = self._to_index_notation(adj_i, adj_j)
-                # check adj_index is proper adjacent to element
-                if adj_index in self and adj_index != element:
-                    # then adj_index is proper adjacent to element
 
-                    root_of_the_adj = self._find_root_of_JSUFD(adj_index)
-                    if root_of_the_adj not in proper_adj_component_list:
-                        proper_adj_component_list.append(root_of_the_adj)
+        proper_adj_component_list = []
+        for adj_index in (element + self._adj[self.adj_region_table[element]]):
+            if adj_index in self :
+                # then adj_index is proper adjacent to element
+                root_of_the_adj = self._find_root_of_JSUFD(adj_index)
+                if root_of_the_adj not in proper_adj_component_list:
+                    proper_adj_component_list.append(root_of_the_adj)
         return proper_adj_component_list
 
     def bfalg_add(self):
@@ -322,35 +334,25 @@ class JStree(object):
         new_root_in_JSUFD = single_disjoint_element # not yet determined but assuming
         # assume component size of single_disjoint_element is maximum in [list of proper adj  union  the single element]
         max_siz = 1
-        for jsufd_root in proper_adjacent_jsufd_root:
-            assert  jsufd_root != single_disjoint_element
+        if len(proper_adjacent_jsufd_root) == 0:
+            self._is_root_of_JSUFD[new_root_in_JSUFD] = True
+            self._map_JSUFD_root_to_JStree[new_root_in_JSUFD] = single_disjoint_element
+            self._siz[new_root_in_JSUFD] = 1
+            return
 
+        new_root_in_JSUFD = max(proper_adjacent_jsufd_root,key=lambda x: self._siz[self._map_JSUFD_root_to_JStree[x]])
+        for jsufd_root in proper_adjacent_jsufd_root:
             #find root in jstree and merge js-tree
-            assert self._is_root_of_JSUFD[jsufd_root]
             root =self._map_JSUFD_root_to_JStree[jsufd_root]
             component_size += self._siz[root]
-
-            # update new root in JSUFD
-            if max_siz < self._siz[root]:
-                max_siz = self._siz[root]
-                new_root_in_JSUFD = jsufd_root
             self._par[root] = single_disjoint_element
             self.n_comps -= 1  #
-        self._siz[single_disjoint_element] = component_size
-
-        assert new_root_in_JSUFD in proper_adjacent_jsufd_root or new_root_in_JSUFD == single_disjoint_element
-
-        for jsufd_root_or_new_root_in_JSUFD in proper_adjacent_jsufd_root:
-            self._par_compressed_JSUFD[jsufd_root_or_new_root_in_JSUFD] = new_root_in_JSUFD
-            if jsufd_root_or_new_root_in_JSUFD == new_root_in_JSUFD:
-                self._is_root_of_JSUFD[jsufd_root_or_new_root_in_JSUFD] = True
+            self._par_compressed_JSUFD[jsufd_root] = new_root_in_JSUFD
+            if jsufd_root == new_root_in_JSUFD:
+                self._is_root_of_JSUFD[jsufd_root] = True
             else:
-                self._is_root_of_JSUFD[jsufd_root_or_new_root_in_JSUFD] = False
+                self._is_root_of_JSUFD[jsufd_root] = False
         self._par_compressed_JSUFD[single_disjoint_element] = new_root_in_JSUFD
-
-        #if new_root_in_JSUFD == single_disjoint_element , just following code is essential.
-        self._is_root_of_JSUFD[new_root_in_JSUFD] = True
-
         self._map_JSUFD_root_to_JStree[new_root_in_JSUFD] = single_disjoint_element
-
+        self._siz[single_disjoint_element] = component_size
 
