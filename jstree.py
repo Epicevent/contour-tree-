@@ -131,8 +131,9 @@ class JStree(object):
         self.n_comps = 0  # the number of disjoint trees
         self._n_leaf = 0  # the number of all leaf node over forest
         self._next = 0  # next available index in sorted index list.
-        self._is_root = np.zeros(self.N * self.M, dtype=bool)  # It is root element?
-
+        self._is_root_of_JSUFD = np.zeros(self.N * self.M, dtype=bool)  # It is root element of JSUFD?
+        self._map_JSUFD_root_to_JStree = np.zeros(self.N*self.M,dtype=int) # to find root element
+        self._siz = np.zeros(self.N*self.M,dtype=int) #correct only for root (in JStree)
         # for speeding up root found function
         self._par_compressed_JSUFD = np.ones(self.N * self.M, dtype=int)  # [1,...,1]
         self._par_compressed_JSUFD = self._par_compressed_JSUFD * self._none  # [_none, ... ,_none]
@@ -217,10 +218,10 @@ class JStree(object):
             return False
         if self._par_compressed_JSUFD[item] == item and self._par[item] == item:
             return True
-        root = self._find_root(item)
-        return self._definitely_contains(root)
+        jsufdroot = self._find_root_of_JSUFD(item)
+        return self._definitely_contains(jsufdroot)
 
-    def _find_root(self, x):
+    def _find_root_of_JSUFD(self, x):
         """Find the root of the disjoint set containing the given element.
         Parameters
         ----------
@@ -239,7 +240,7 @@ class JStree(object):
 
         if x not in self:
             return self._none
-        if self._is_root[x]:
+        if self._is_root_of_JSUFD[x]:
             return x
 
         p = x
@@ -255,8 +256,8 @@ class JStree(object):
             if q == self._none:
                 raise ValueError('element {} has no parent ({} is regarded as none) '.format(p, q))
             p = q
-        assert self._par[p] == p
 
+        assert self._is_root_of_JSUFD[p]
         return p
 
     def _to_index_notation(self, i, j):
@@ -268,7 +269,7 @@ class JStree(object):
         j = int(v / self.N)
         return i, j
 
-    def find_adj(self, element):  # find roots of distinct  components adjacent a element.
+    def find_adj(self, element):  # find jsUFD roots  of distinct  components adjacent a element.
         ele_i, ele_j = self._to_ij_notation(element)
         adj_i = 0
         adj_j = 0
@@ -283,7 +284,7 @@ class JStree(object):
                 if adj_index in self and adj_index != element:
                     # then adj_index is proper adjacent to element
 
-                    root_of_the_adj = self._find_root(adj_index)
+                    root_of_the_adj = self._find_root_of_JSUFD(adj_index)
                     if root_of_the_adj not in proper_adj_component_list:
                         proper_adj_component_list.append(root_of_the_adj)
         return proper_adj_component_list
@@ -305,20 +306,50 @@ class JStree(object):
         self._par[single_disjoint_element] = single_disjoint_element
         self._par_compressed_JSUFD[single_disjoint_element] = single_disjoint_element
 
+
         self._next += 1
         self.n_elts += 1
         self.n_comps += 1
 
-        proper_adjacent_roots = self.find_adj(single_disjoint_element)
-        self.leaf_elements[single_disjoint_element] = (len(proper_adjacent_roots) == 0)
-        ret_bool = (len(proper_adjacent_roots) > 1)  # bifurcation point?
+        proper_adjacent_jsufd_root = self.find_adj(single_disjoint_element)
+        self.leaf_elements[single_disjoint_element] = (len(proper_adjacent_jsufd_root) == 0)
+        ret_bool = (len(proper_adjacent_jsufd_root) > 1)  # bifurcation point?
         self.bifurcation_elements[single_disjoint_element] = ret_bool
         # merge the components  into one
-        for root in proper_adjacent_roots:
-            assert root != single_disjoint_element
-            self._par[root] = single_disjoint_element
-            self._par_compressed_JSUFD[root] = single_disjoint_element
-            self._is_root[root] = False
 
-            self.n_comps -= 1
-        self._is_root[single_disjoint_element] = True
+        component_size = 1 #component size of single_disjoint_element .
+        new_root_in_JSUFD = single_disjoint_element # not yet determined but assuming
+        # assume component size of single_disjoint_element is maximum in [list of proper adj  union  the single element]
+        max_siz = 1
+        for jsufd_root in proper_adjacent_jsufd_root:
+            assert  jsufd_root != single_disjoint_element
+
+            #find root in jstree and merge js-tree
+            assert self._is_root_of_JSUFD[jsufd_root]
+            root =self._map_JSUFD_root_to_JStree[jsufd_root]
+            component_size += self._siz[root]
+
+            # update new root in JSUFD
+            if max_siz < self._siz[root]:
+                max_siz = self._siz[root]
+                new_root_in_JSUFD = jsufd_root
+            self._par[root] = single_disjoint_element
+            self.n_comps -= 1  #
+        self._siz[single_disjoint_element] = component_size
+
+        assert new_root_in_JSUFD in proper_adjacent_jsufd_root or new_root_in_JSUFD == single_disjoint_element
+
+        for jsufd_root_or_new_root_in_JSUFD in proper_adjacent_jsufd_root:
+            self._par_compressed_JSUFD[jsufd_root_or_new_root_in_JSUFD] = new_root_in_JSUFD
+            if jsufd_root_or_new_root_in_JSUFD == new_root_in_JSUFD:
+                self._is_root_of_JSUFD[jsufd_root_or_new_root_in_JSUFD] = True
+            else:
+                self._is_root_of_JSUFD[jsufd_root_or_new_root_in_JSUFD] = False
+        self._par_compressed_JSUFD[single_disjoint_element] = new_root_in_JSUFD
+
+        #if new_root_in_JSUFD == single_disjoint_element , just following code is essential.
+        self._is_root_of_JSUFD[new_root_in_JSUFD] = True
+
+        self._map_JSUFD_root_to_JStree[new_root_in_JSUFD] = single_disjoint_element
+
+

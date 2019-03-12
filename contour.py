@@ -92,8 +92,8 @@ if __name__ =="__main__":
     jointsplittree.make(increasing_indices[::-1]) #reverse
     split_bifurcation_point = jointsplittree.get_bifurcation_point()
 
-    print (joint_bifurcation_point)
-    print(split_bifurcation_point)
+    print (np.sum(joint_bifurcation_point))
+    print(np.sum(split_bifurcation_point))
     representing_img = grayimg.convert('RGBA')
     draw_filled_circle(representing_img,1001,1)
     representing_img.show()
