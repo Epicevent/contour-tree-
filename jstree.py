@@ -96,8 +96,7 @@ class JStree(object):
     __len__
         calling "len(js)" (where "js" is an instance of "JStree")
         returns the number of elements.(number of indices in JSUFD)
-         * because of when this->make() is called all of index in sorted index list
-         must be elements(of JSUFD)
+
 
     __contains__
         For "js" and instance of "JStree" and x an index :: integer( x in [0,NM) ),
@@ -131,6 +130,7 @@ class JStree(object):
         self.n_comps = 0  # the number of disjoint trees
         self._n_leaf = 0  # the number of all leaf node over forest
         self._next = 0  # next available index in sorted index list.
+        self._is_root = np.zeros(self.N*self.M , dtype=bool) # It is root element?
 
         # for speeding up root found function
         self._par_compressed_JSUFD = np.ones(self.N * self.M, dtype=int)  # [1,...,1]
@@ -140,12 +140,22 @@ class JStree(object):
         self._par = np.ones(self.N * self.M, dtype=int)  # [ 1,...,1]
         self._par = self._par * self._none  # [_none, ... ,_none]
 
-        # size of the component - correct only for roots
-        self._siz = np.ones(self.N * self.M, dtype=int)  # [ 1,...,1]
-        self._siz = self._siz * self._none  # [_none, ... ,_none]
-
     # public method
     def make(self, array):
+        """
+        :param array:
+        initialize or resetting this structure
+        **  let js is instance of "JStree".
+            js.make(array) # first
+            js.make(array1) # second
+            # js lost information about array ,and the first version internal tree was deleted.
+            # only information made by  last make function remains.
+        * array will be one of member of this . if it changed, the member of this instance changed
+            js.make(array1) # second
+            modify(array1)# it changes one of member of js
+          but , return value of get_functions(getter) Never changed.
+        :return: none
+        """
         self.sorted_index_list = array  # required input for make()
         # check condition for sorted index list
         cond1 = (self.N * self.M == len(self.sorted_index_list))
@@ -153,19 +163,24 @@ class JStree(object):
         if not (cond1 and cond2):
             raise ValueError("you must input {}size array but Its size was {} or not distinct ".format(
                 self.N * self.M, len(array)))
+        if self._made:
+            self.__init__(self.N,self.M)
+        print("PROGRESS BAR IS HERE")
+        progress_state = 0
         for i in range(self.N * self.M):
             self.bfalg_add()
         self._made = True
 
+# get functions ( getter)
     def get_bifurcation_point(self):
         if not self._made:
             raise NotImplementedError("jstree.make( arraytype ) is requreid")
-        return self.bifurcation_elements
+        return np.copy(self.bifurcation_elements)
 
     def get_leaf_information(self):
         if not self._made:
             raise NotImplementedError("jstree.make( arraytype ) is requreid")
-        return self.leaf_elements
+        return np.copy(self.leaf_elements)
 
     def get_JStree_data(self):
         if not self._made:
@@ -180,7 +195,7 @@ class JStree(object):
         :param element:
         :return: True if "element" can not be element of JStree else return False
         """
-        if element in range(self.N, self.M):
+        if (self.N * self.M) > element >= 0:
             return False
         else:
             return True  # out of range
@@ -222,9 +237,13 @@ class JStree(object):
 
         if x not in self:
             return self._none
+        if self._is_root[x] :
+            return x
 
         p = x
+
         while p != self._par_compressed_JSUFD[p]:
+
             # path compression
             q = self._par_compressed_JSUFD[p]
             self._par_compressed_JSUFD[p] = self._par_compressed_JSUFD[q]
@@ -235,6 +254,7 @@ class JStree(object):
                 raise ValueError('element {} has no parent ({} is regarded as none) '.format(p, q))
             p = q
         assert self._par[p] == p
+
         return p
 
     def _to_index_notation(self, i, j):
@@ -260,6 +280,7 @@ class JStree(object):
                 # check adj_index is proper adjacent to element
                 if adj_index in self and adj_index != element:
                     # then adj_index is proper adjacent to element
+
                     root_of_the_adj = self._find_root(adj_index)
                     if root_of_the_adj not in proper_adj_component_list:
                         proper_adj_component_list.append(root_of_the_adj)
@@ -268,10 +289,9 @@ class JStree(object):
     def bfalg_add(self):
         """
         add new root index as root of one of tree in JSUFD
-        if it is not element. and returns
-        True if it is bifurcation element else False.
-        :param new_root_index:
-        :return: boolean [ Is bifurcation point]
+        and restore the if it is bifurcation points or not.
+        :param :
+        :return: none
         """
 
         # add a single disjoint element.
@@ -282,7 +302,7 @@ class JStree(object):
         single_disjoint_element = self.sorted_index_list[self._next]
         self._par[single_disjoint_element] = single_disjoint_element
         self._par_compressed_JSUFD[single_disjoint_element] = single_disjoint_element
-        self._siz[single_disjoint_element] = 1
+
         self._next += 1
         self.n_elts += 1
         self.n_comps += 1
@@ -293,8 +313,10 @@ class JStree(object):
         self.bifurcation_elements[single_disjoint_element] = ret_bool
         # merge the components  into one
         for root in proper_adjacent_roots:
+            assert root != single_disjoint_element
             self._par[root] = single_disjoint_element
             self._par_compressed_JSUFD[root] = single_disjoint_element
-            self.n_comps -= 1
+            self._is_root[root] = False
 
-        return ret_bool
+            self.n_comps -= 1
+        self._is_root[single_disjoint_element] = True
