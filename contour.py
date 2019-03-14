@@ -67,34 +67,90 @@ def increasing_arg_sorting(im_vector):
 
 
 
-def center_to_xy(center):
-    return (100,100)
+def center_to_xy(center,num_of_cols,num_of_rows):
+    # center is represented by jstree. (
+    # xy coordinate
+    x = center / num_of_rows # if center 0 then x =0 ,if center
+    y = center % num_of_cols
+    return (x,y)
 
-def xy_representing_circle(center,radius):
-    return (200,99,300,101)
+def xy_representing_circle(centerxy,radius):
+    x,y = centerxy
+
+    return (x-radius,y-radius,x + radius,y+radius)
 
 
 def draw_filled_circle (imgae_object,xy_of_center,radius,color = 'red'):
     draw = ImageDraw.Draw(imgae_object)
-    xy = xy_representing_circle(xy_of_center,radius)
-    draw.ellipse(xy,  fill=color,outline=color)
+    if radius > 0:
+        xy = xy_representing_circle(xy_of_center,radius)
+        draw.ellipse(xy,  fill=color,outline=color)
+    else:
+        draw.point(xy_of_center, fill=color)
+def draw_all_bifurcation_point(image_object,number_of_rows_im , number_of_cols_im,joint_point,split_point):
 
-
-if __name__ =="__main__":
-    im = Image.open('IM-0001-0001.jpeg')
+    radius_of_contour_point = max(int((number_of_rows_im + number_of_cols_im)*0.001),1)
+    radius =0
+    for i in range(len(joint_point)):
+        xycenter = center_to_xy(i, number_of_cols_im, number_of_rows_im)
+        if joint_point[i] and split_point[i]:
+            draw_filled_circle(image_object,xycenter,radius_of_contour_point,'red')
+        if joint_point[i] and not split_point[i]:
+            draw_filled_circle(image_object, xycenter, radius, 'blue')
+        if split_point[i] and not joint_point[i]:
+            draw_filled_circle(image_object, xycenter, radius, 'green')
+def get_bifurcation_points(imagefilename):
+    im = Image.open(imagefilename)
     grayimg = im.convert('LA')
     v = image_vectorize(grayimg)
-    number_of_cols , number_of_rows = grayimg.size
-    jointsplittree = jstree.JStree(number_of_rows,number_of_cols)
+    number_of_cols, number_of_rows = grayimg.size
+    jointsplittree = jstree.JStree(number_of_rows, number_of_cols)
     increasing_indices = increasing_arg_sorting(v)
     jointsplittree.make(increasing_indices)
     joint_bifurcation_point = jointsplittree.get_bifurcation_point()
-    print(jointsplittree.max_n_comp)
-    jointsplittree.make(increasing_indices[::-1]) #reverse
+
+    jointsplittree.make(increasing_indices[::-1])  # reverse
     split_bifurcation_point = jointsplittree.get_bifurcation_point()
 
-    print (np.sum(joint_bifurcation_point))
-    print(np.sum(split_bifurcation_point))
-    representing_img = grayimg.convert('RGBA')
-    draw_filled_circle(representing_img,1001,1)
-    representing_img.show()
+    representing_img = grayimg.convert('RGB')
+    draw_all_bifurcation_point(representing_img, number_of_rows, number_of_cols,
+                               joint_bifurcation_point, split_bifurcation_point)
+    txtdata = "title : " + imagefilename +"\n"
+    txtdata += "size : " +str(number_of_rows)+" " +str(number_of_cols)+"\n"
+    for i in range(len(joint_bifurcation_point)):
+        if joint_bifurcation_point[i] and split_bifurcation_point[i]:
+            txtdata+="3"
+        elif joint_bifurcation_point[i] and not split_bifurcation_point[i]:
+            txtdata+="1"
+        elif not joint_bifurcation_point[i] and split_bifurcation_point[i]:
+            txtdata+="2"
+        else:
+            txtdata+="0"
+        txtdata+=" "
+    return representing_img , txtdata
+
+import sys
+import glob, os
+if __name__ =="__main__":
+    argc =len(sys.argv)
+    if argc == 1:
+        arg1='IM-0001-0001.jpeg'
+
+    if argc <= 2:
+        arg2 =os.curdir
+    else:
+        arg2 = sys.argv[2]
+    if arg1=='*.jpeg':# all JPEG images in the current directory.
+        for infile in glob.glob("*.jpeg"):
+            file, ext = os.path.splitext(infile)
+            rep_img, txt = get_bifurcation_points(infile)
+            rep_img.save(arg2+"/B"+infile,"JPEG")
+            with open(arg2 + "/B" + file+".txt", "w") as f:
+                f.write(txt)
+
+    else:
+        file, ext = os.path.splitext(arg1)
+        rep_img, txt =get_bifurcation_points(arg1)
+        rep_img.save(arg2+"/B"+arg1,"JPEG")
+        with open(arg2 + "/B" + file + ".txt", "w") as f:
+            f.write(txt)
