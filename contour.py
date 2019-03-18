@@ -5,20 +5,20 @@
 
   how to use :
 
-  there is two option :
+  there is three option :
     python contour.py [image file name] [directory name to save result]
 
-    python3 contour.py [image file name]
+    python contour.py [image file name]
 
+    python contour.py [image file name] [directory name to save result] [directory name for input image file]
  result :
-
-  txt file : [image file name]
-  txt file format :
+    bifurcation data ( it is image )
+  img file : "Result_"+ [image file name]
+  img file format :
   [
-    title : [image file name] \n
-    image size : [# of rows] [# of cols] \n
-    [ data of bifurcation points ]
+    same size of image which is cosisted of "0" "1" "2" "3"
   ]
+
   data of bifurcation points
     the number in order index order
     0 0 0 0 ...  1 ...  2 ... 3 ...0 0 0 0
@@ -115,19 +115,13 @@ def get_bifurcation_points(imagefilename):
     representing_img = grayimg.convert('RGB')
     draw_all_bifurcation_point(representing_img, number_of_rows, number_of_cols,
                                joint_bifurcation_point, split_bifurcation_point)
-    txtdata = "title : " + imagefilename +"\n"
-    txtdata += "size : " +str(number_of_rows)+" " +str(number_of_cols)+"\n"
-    for i in range(len(joint_bifurcation_point)):
-        if joint_bifurcation_point[i] and split_bifurcation_point[i]:
-            txtdata+="3"
-        elif joint_bifurcation_point[i] and not split_bifurcation_point[i]:
-            txtdata+="1"
-        elif not joint_bifurcation_point[i] and split_bifurcation_point[i]:
-            txtdata+="2"
-        else:
-            txtdata+="0"
-        txtdata+=" "
-    return representing_img , txtdata
+    res_array = np.zeros( number_of_rows*number_of_cols,dtype=int)
+    res_array[joint_bifurcation_point] = 1
+    res_array[split_bifurcation_point] = 2
+    res_array[joint_bifurcation_point & split_bifurcation_point] = 3
+    res_array = np.reshape(res_array, (number_of_rows, number_of_cols), order='F')
+    result_img = Image.fromarray(res_array,'L')
+    return representing_img ,  result_img
 
 import sys
 import glob, os
@@ -135,22 +129,32 @@ if __name__ =="__main__":
     argc =len(sys.argv)
     if argc == 1:
         arg1='IM-0001-0001.jpeg'
-
+    else:
+        arg1 = sys.argv[1]
+    current_dir =  os.curdir
     if argc <= 2:
-        arg2 =os.curdir
+        arg2 =current_dir
     else:
         arg2 = sys.argv[2]
+    if argc >3 :
+        arg3 = sys.argv[3]
+    else :
+        arg3 = current_dir
+
+    # modify current_dir to arg3
+    if current_dir != arg3:
+        os.chdir(arg3)
+
     if arg1=='*.jpeg':# all JPEG images in the current directory.
         for infile in glob.glob("*.jpeg"):
             file, ext = os.path.splitext(infile)
-            rep_img, txt = get_bifurcation_points(infile)
+            rep_img, res_img = get_bifurcation_points(infile)
             rep_img.save(arg2+"/B"+infile,"JPEG")
-            with open(arg2 + "/B" + file+".txt", "w") as f:
-                f.write(txt)
+            res_img.save(arg2+"/Result_"+file+".png","PNG")
 
     else:
         file, ext = os.path.splitext(arg1)
-        rep_img, txt =get_bifurcation_points(arg1)
+        rep_img, res_img =get_bifurcation_points(arg1)
         rep_img.save(arg2+"/B"+arg1,"JPEG")
-        with open(arg2 + "/B" + file + ".txt", "w") as f:
-            f.write(txt)
+        res_img.save(arg2+"/Result_"+file+".png","PNG")
+    os.chdir(current_dir)
